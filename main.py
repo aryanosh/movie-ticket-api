@@ -1,4 +1,6 @@
-from fastapi import FastAPI, HTTPException
+from uuid import uuid4
+
+from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel
 
 app = FastAPI(title="Movie Ticket Booking API")
@@ -17,6 +19,17 @@ class Showtime(BaseModel):
     date_time: str
     seats: dict[str, bool]    
 
+class BookingRequest(BaseModel):
+    showtime_id: int
+    seat_label: str
+    customer_name: str
+
+class BookingResponse(BaseModel):
+    booking_id: str
+    showtime_id: int
+    seat_label: str
+    customer_name: str
+    status: str
 # --- In-Memory Data ---
 
 movies: list[dict] = [
@@ -40,6 +53,7 @@ showtimes: list[dict] = [
     },
 ]
 
+bookings: list[dict] = []
 # --- Helper Functions ---
 
 def find_showtime(showtime_id: int) -> dict | None:
@@ -74,3 +88,31 @@ def get_showtime(showtime_id: int):
     if not showtime:
         raise HTTPException(status_code=404, detail="Showtime not found")
     return showtime
+
+# --- Booking Endpoints ---
+
+@app.post("/bookings", response_model=BookingResponse, status_code=status.HTTP_201_CREATED)
+def create_booking(request: BookingRequest):
+    # Check that the showtime exists
+    showtime = find_showtime(request.showtime_id)
+    if not showtime:
+        raise HTTPException(status_code=404, detail="Showtime not found")
+
+    # Check that the seat label is valid
+    if request.seat_label not in showtime["seats"]:
+        raise HTTPException(status_code=400, detail=f"Seat {request.seat_label} does not exist for this showtime")
+
+    # Mark the seat as unavailable
+    showtime["seats"][request.seat_label] = False
+
+        # Create the booking record
+    booking = {
+        "booking_id": str(uuid4()),
+        "showtime_id": request.showtime_id,
+        "seat_label": request.seat_label,
+        "customer_name": request.customer_name,
+        "status": "confirmed",
+    }
+    bookings.append(booking)
+
+    return booking
