@@ -101,7 +101,8 @@ def create_booking(request: BookingRequest):
     # Check that the seat label is valid
     if request.seat_label not in showtime["seats"]:
         raise HTTPException(status_code=400, detail=f"Seat {request.seat_label} does not exist for this showtime")
-
+    if not showtime["seats"][request.seat_label]:
+        raise HTTPException(status_code=409, detail=f"Seat {request.seat_label} is already booked for this showtime")
     # Mark the seat as unavailable
     showtime["seats"][request.seat_label] = False
 
