@@ -62,6 +62,11 @@ def find_showtime(showtime_id: int) -> dict | None:
             return showtime
     return None
 
+def find_booking(booking_id: str) -> dict | None:
+    for booking in bookings:
+        if booking["booking_id"] == booking_id:
+            return booking
+    return None
 # --- Movie Endpoints ---
 
 @app.get("/movies", response_model=list[Movie])
@@ -116,4 +121,15 @@ def create_booking(request: BookingRequest):
     }
     bookings.append(booking)
 
+    return booking
+
+@app.get("/bookings", response_model=list[BookingResponse])
+def get_bookings():
+    return bookings
+
+@app.get("/bookings/{booking_id}", response_model=BookingResponse)
+def get_booking(booking_id: str):
+    booking = find_booking(booking_id)
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
     return booking
